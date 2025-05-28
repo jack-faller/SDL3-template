@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.26)
 project(sdl3-test)
 
-option(SDL3-TEST_VENDORED "Use vendored libraries" OFF)
-
-if(SDL3-TEST_VENDORED)
+if(EMSCRIPTEN)
     add_subdirectory(lib/SDL EXCLUDE_FROM_ALL)
 else()
     find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
