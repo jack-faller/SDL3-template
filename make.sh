@@ -12,15 +12,15 @@ while [ $# != 0 ]; do
 			glad --api='gles2=3.0' --out-path=libraries/glad
 			;;
 		linux)
-			if ! [ -e build ]; then
-				cmake -S . -B build
+			if ! [ -e linxu-build ]; then
+				cmake -S . -B linux-build
 			fi
-			cmake --build build --parallel "$(nproc)"
+			cmake --build linux-build --parallel "$(nproc)"
 			;;
 		run)
 			shift
 			NAME="$(grep '^project(.*)$' CMakeLists.txt | sed 's/^project(\(.*\))$/\1/')"
-			"./build/$NAME" "$@"
+			"./linux-build/$NAME" "$@"
 			exit
 	esac
 	shift
