@@ -1,4 +1,4 @@
-#version 320
+#version 300 es
 
 // These are the default values, they're just here for reference.
 precision highp float;

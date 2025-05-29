@@ -1,4 +1,4 @@
-// This actually includes GLES 3.2 but is named GLES2.
+// This actually includes GLES 3.0 but is named GLES2.
 #include <SDL3/SDL.h>
 #include <glad/gles2.h>
 #define SDL_MAIN_USE_CALLBACKS
@@ -157,7 +157,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
 	window = SDL_CreateWindow("Test", 800, 600, SDL_WINDOW_OPENGL);
 	context = SDL_GL_CreateContext(window);

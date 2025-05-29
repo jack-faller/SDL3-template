@@ -1,4 +1,4 @@
-#version 320
+#version 300 es
 
 // Copy these from the fragment shader because they are not set by default here.
 // Not sure if these are good values.
@@ -10,4 +10,4 @@ precision lowp samplerCube;
 layout (location = 0) out vec4 frag_color;
 void main() {
   frag_color = vec4(1, 0, 1, 1);
-};
+}
