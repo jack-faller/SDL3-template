@@ -20,7 +20,7 @@ endif()
 
 add_subdirectory(libraries/glad/)
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS sources/*.[ch])
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.[ch])
 add_executable(${EXECUTABLE_NAME} WIN32 ${SOURCES})
 
 if(EMSCRIPTEN)
@@ -29,7 +29,7 @@ if(EMSCRIPTEN)
 		"--shell-file \"${CMAKE_CURRENT_LIST_DIR}/sources/shell.html\""
 		"-sMIN_WEBGL_VERSION=2")
 	file(GLOB_RECURSE ASSET_SOURCES CONFIGURE_DEPENDS assets/*)
-	set_property(TARGET ${EXECUTABLE_NAME} APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_LIST_DIR}/sources/shell.html ${ASSET_SOURCES})
+	set_property(TARGET ${EXECUTABLE_NAME} APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/shell.html ${ASSET_SOURCES})
 else()
 	add_custom_target(assets DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/assets)
 	add_custom_command(
