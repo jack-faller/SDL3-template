@@ -9,7 +9,8 @@ SDL_Window *window;
 
 #define GPU_ERROR(...) SDL_LogError(SDL_LOG_CATEGORY_GPU, __VA_ARGS__)
 
-void *storage_read(SDL_Storage *storage, const char *path, Uint64 *length_out) {
+uint8_t *
+storage_read(SDL_Storage *storage, const char *path, Uint64 *length_out) {
 	Uint64 length;
 	if (SDL_GetStorageFileSize(storage, path, &length) && length > 0) {
 		void *out = SDL_malloc(length);
@@ -26,7 +27,7 @@ void *storage_read(SDL_Storage *storage, const char *path, Uint64 *length_out) {
 		return NULL;
 	}
 }
-void *title_storage_read(const char *path, Uint64 *length_out) {
+uint8_t *title_storage_read(const char *path, Uint64 *length_out) {
 	SDL_Storage *storage = SDL_OpenTitleStorage(NULL, 0);
 	if (storage == NULL)
 		return NULL;
@@ -39,7 +40,8 @@ void *title_storage_read(const char *path, Uint64 *length_out) {
 
 GLuint compile_shader(const char *asset_path, GLenum type) {
 	Uint64 long_source_length;
-	const GLchar *source = title_storage_read(asset_path, &long_source_length);
+	const GLchar *source
+		= (GLchar *)title_storage_read(asset_path, &long_source_length);
 	if (source == NULL)
 		return 0;
 	GLint source_length = long_source_length;
@@ -152,14 +154,39 @@ bool init_graphics() {
 	return true;
 }
 
+int update_uint_variable(
+	const char *name, const char *new_value, int old_value
+) {
+	char *error_char = NULL;
+	int value = SDL_strtoul(new_value, &error_char, 0);
+	if (error_char != new_value + SDL_strlen(new_value) || error_char == new_value) {
+		SDL_LogWarn(
+			SDL_LOG_CATEGORY_APPLICATION,
+			"Expected integer for %s, got %s\n",
+			name,
+			new_value
+		);
+		value = old_value;
+	}
+	return value;
+}
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 	int rc = SDL_Init(SDL_INIT_VIDEO);
+	int width = 800, height = 600;
+	for (int i = 1; i < argc; ++i) {
+		if (0 == SDL_strcmp(argv[i], "--width")) {
+			width = update_uint_variable("--width", argv[++i], width);
+		} else if (0 == SDL_strcmp(argv[i], "--height")) {
+			height = update_uint_variable("--height", argv[++i], height);
+		}
+	}
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-	window = SDL_CreateWindow("Test", 800, 600, SDL_WINDOW_OPENGL);
+	window = SDL_CreateWindow("Test", width, height, SDL_WINDOW_OPENGL);
 	context = SDL_GL_CreateContext(window);
 
 	{
@@ -196,7 +223,17 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	return SDL_APP_CONTINUE;
 }
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
+	static bool fullscreen;
 	switch (event->type) {
+	case SDL_EVENT_KEY_DOWN:
+		if (event->key.key == SDLK_F)
+			SDL_SetWindowFullscreen(window, !fullscreen);
+		break;
+	case SDL_EVENT_WINDOW_ENTER_FULLSCREEN: fullscreen = true; break;
+	case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN: fullscreen = false; break;
+	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+		glViewport(0, 0, event->window.data1, event->window.data2);
+		break;
 	case SDL_EVENT_QUIT: return SDL_APP_SUCCESS;
 	}
 	return SDL_APP_CONTINUE;
