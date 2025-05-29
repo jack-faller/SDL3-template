@@ -15,8 +15,8 @@
    (native-inputs (map specification->package '("glad")))
    (inputs (cons (replace-mesa (specification->package "sdl3"))
 				 (map specification->package '())))
-   (home-page "https://jackfaller.xyz")
-   (synopsis "My website")
-   (description "My website")
+   (home-page "")
+   (synopsis "")
+   (description "")
    (license license:gpl3)))
 sd3-test

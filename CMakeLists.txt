@@ -13,14 +13,15 @@ if(EMSCRIPTEN)
     set(SDL_SHARED OFF)
 	set(CMAKE_EXECUTABLE_SUFFIX ".html")
 
-    add_subdirectory(lib/SDL EXCLUDE_FROM_ALL)
+    add_subdirectory(libraries/SDL EXCLUDE_FROM_ALL)
 else()
     find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
 endif()
 
-add_subdirectory(lib/glad/)
+add_subdirectory(libraries/glad/)
 
-add_executable(${EXECUTABLE_NAME} WIN32 sdl3-test.c)
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS sources/*)
+add_executable(${EXECUTABLE_NAME} WIN32 ${SOURCES})
 
 if(EMSCRIPTEN)
 	target_link_libraries(${EXECUTABLE_NAME} PRIVATE
