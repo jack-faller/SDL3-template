@@ -1,6 +1,6 @@
 #version 320
 
-// These are the default values, they're just here as a reference.
+// These are the default values, they're just here for reference.
 precision highp float;
 precision highp int;
 precision lowp sampler2D;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.22)
 project(sdl3-test)
 
 if(EMSCRIPTEN)
@@ -19,7 +19,7 @@ else()
 	add_custom_target(assets DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy_output)
 	add_custom_command(
 			OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy_output
-			COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+			COMMAND ${CMAKE_COMMAND} -E copy_directory
 					${CMAKE_SOURCE_DIR}/assets
 					${CMAKE_CURRENT_BINARY_DIR}/assets)
     add_dependencies(sdl3-test assets)

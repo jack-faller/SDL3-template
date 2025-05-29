@@ -12,7 +12,6 @@
    (version "0.0.0")
    (source (local-file (dirname (current-filename)) #:recursive? #t))
    (build-system cmake-build-system)
-   (arguments `(#:cmake ,(specification->package "cmake")))
    (native-inputs (map specification->package '("glad")))
    (inputs (cons (replace-mesa (specification->package "sdl3"))
 				 (map specification->package '())))
