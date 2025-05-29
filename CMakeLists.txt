@@ -26,15 +26,16 @@ if(EMSCRIPTEN)
 	target_link_libraries(${EXECUTABLE_NAME} PRIVATE
 		"--preload-file \"${CMAKE_CURRENT_LIST_DIR}/assets@/assets\""
 		"-sMIN_WEBGL_VERSION=2")
+	file(GLOB_RECURSE ASSET_SOURCES CONFIGURE_DEPENDS assets/*)
+	set_property(TARGET ${EXECUTABLE_NAME} APPEND PROPERTY LINK_DEPENDS ${ASSET_SOURCES})
 else()
-	# make sure this always runs
-	add_custom_target(assets DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dummy_output)
+	add_custom_target(assets DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/assets)
 	add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dummy_output
-			COMMAND ${CMAKE_COMMAND} -E copy_directory
+			OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/assets
+			COMMAND ${CMAKE_COMMAND} -E create_symlink
 					${CMAKE_SOURCE_DIR}/assets
 					${CMAKE_CURRENT_BINARY_DIR}/assets)
-    add_dependencies(${EXECUTABLE_NAME} assets)
+	add_dependencies(${EXECUTABLE_NAME} assets)
 endif()
 
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC SDL3::SDL3 glad)

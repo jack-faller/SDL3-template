@@ -179,8 +179,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 	}
 
 	SDL_Log("Version string: %s\n", version);
-	SDL_Log("Base: %s\n", SDL_GetBasePath());
-	SDL_Log("Pref: %s\n", SDL_GetPrefPath("sdl3-test", "jackfaller.xyz"));
 
 	if (!init_graphics()) {
 		GPU_ERROR("Failed to initialise graphics");
