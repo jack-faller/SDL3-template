@@ -186,7 +186,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-	window = SDL_CreateWindow("Test", width, height, SDL_WINDOW_OPENGL);
+	window = SDL_CreateWindow("SDL3 Template", width, height, SDL_WINDOW_OPENGL);
 	context = SDL_GL_CreateContext(window);
 
 	{
