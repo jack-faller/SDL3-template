@@ -8,7 +8,7 @@ while [ $# != 0 ]; do
 		web)
 			docker run --rm --network=host --interactive --tty --volume "$(pwd):/proj" --workdir /proj --user $UID:$GID emscripten/emsdk sh -c 'emcmake cmake -S . -B emscripten-build && cd emscripten-build && emmake make --jobs "$(nproc)"'
 			;;
-		build)
+		linux)
 			if ! [ -e build ]; then
 				cmake -S . -B build
 			fi
