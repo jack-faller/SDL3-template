@@ -6,6 +6,9 @@
 
 SDL_GLContext context;
 SDL_Window *window;
+struct {
+	GLuint program, tri_buffer, vertex_array;
+} gl;
 
 #define GPU_ERROR(...) SDL_LogError(SDL_LOG_CATEGORY_GPU, __VA_ARGS__)
 
@@ -20,6 +23,7 @@ storage_read(SDL_Storage *storage, const char *path, Uint64 *length_out) {
 			return out;
 		} else {
 			SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "IO loading: %s\n", path);
+			SDL_free(out);
 			return NULL;
 		}
 	} else {
@@ -40,7 +44,7 @@ uint8_t *title_storage_read(const char *path, Uint64 *length_out) {
 
 GLuint compile_shader(const char *asset_path, GLenum type) {
 	Uint64 long_source_length;
-	const GLchar *source
+	GLchar *source
 		= (GLchar *)title_storage_read(asset_path, &long_source_length);
 	if (source == NULL)
 		return 0;
@@ -49,14 +53,16 @@ GLuint compile_shader(const char *asset_path, GLenum type) {
 
 	if (shader == 0) {
 		GPU_ERROR("Error creating shader %s", asset_path);
+		SDL_free(source);
 		return 0;
 	}
 
-	glShaderSource(shader, 1, &source, &source_length);
+	const GLchar *s = source;
+	glShaderSource(shader, 1, &s, &source_length);
+	SDL_free(source);
+
 	glCompileShader(shader);
-
 	GLint compile_success;
-
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &compile_success);
 
 	if (!compile_success) {
@@ -87,17 +93,12 @@ GLuint link_program(GLuint vertex_shader, GLuint fragment_shader) {
 	glAttachShader(program, fragment_shader);
 
 	glLinkProgram(program);
-
 	GLint link_sucess;
-
 	glGetProgramiv(program, GL_LINK_STATUS, &link_sucess);
 
 	if (!link_sucess) {
 		GPU_ERROR("Error Linking program");
-		glDetachShader(program, vertex_shader);
-		glDetachShader(program, fragment_shader);
 		glDeleteProgram(program);
-
 		return 0;
 	}
 
@@ -108,11 +109,9 @@ GLuint load_tri() {
 	GLfloat vertices[] = { -0.7, -0.7, 0, 0.7, -0.7, 0, 0, 0.7, 0 };
 
 	GLuint buffer;
-
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	return buffer;
@@ -121,7 +120,7 @@ GLuint load_tri() {
 bool init_graphics() {
 	glClearColor(0, 0, 0, 0);
 
-	GLuint buffer = load_tri();
+	gl.tri_buffer = load_tri();
 
 	GLuint vertex_shader, fragment_shader;
 	{
@@ -131,25 +130,29 @@ bool init_graphics() {
 			return false;
 		fragment_shader
 			= compile_shader("assets/shaders/shader.frag", GL_FRAGMENT_SHADER);
-		if (fragment_shader == 0)
+		if (fragment_shader == 0) {
+			glDeleteShader(vertex_shader);
 			return false;
+		}
 	}
 
-	GLuint program = link_program(vertex_shader, fragment_shader);
+	gl.program = link_program(vertex_shader, fragment_shader);
+	glDeleteShader(vertex_shader);
+	glDeleteShader(fragment_shader);
+	if (gl.program == 0)
+		return false;
 
-	GLuint pos_attribute_position = glGetAttribLocation(program, "pos");
+	GLuint pos_attribute = glGetAttribLocation(gl.program, "pos");
 
-	GLuint vertex_array;
-	glGenVertexArrays(1, &vertex_array);
+	glGenVertexArrays(1, &gl.vertex_array);
+	glBindVertexArray(gl.vertex_array);
 
-	glBindVertexArray(vertex_array);
+	glBindBuffer(GL_ARRAY_BUFFER, gl.tri_buffer);
+	glVertexAttribPointer(pos_attribute, 3, GL_FLOAT, false, 0, 0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, buffer);
-	glVertexAttribPointer(pos_attribute_position, 3, GL_FLOAT, false, 0, 0);
+	glEnableVertexAttribArray(pos_attribute);
 
-	glEnableVertexAttribArray(pos_attribute_position);
-
-	glUseProgram(program);
+	glUseProgram(gl.program);
 
 	return true;
 }
@@ -159,7 +162,8 @@ int update_uint_variable(
 ) {
 	char *error_char = NULL;
 	int value = SDL_strtoul(new_value, &error_char, 0);
-	if (error_char != new_value + SDL_strlen(new_value) || error_char == new_value) {
+	if (error_char != new_value + SDL_strlen(new_value)
+	    || error_char == new_value) {
 		SDL_LogWarn(
 			SDL_LOG_CATEGORY_APPLICATION,
 			"Expected integer for %s, got %s\n",
@@ -172,7 +176,10 @@ int update_uint_variable(
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
-	int rc = SDL_Init(SDL_INIT_VIDEO);
+	if (!SDL_Init(SDL_INIT_VIDEO)) {
+		GPU_ERROR("Couldn't initialise video output: %s\n", SDL_GetError());
+		return SDL_APP_FAILURE;
+	}
 	int width = 800, height = 600;
 	for (int i = 1; i < argc; ++i) {
 		if (0 == SDL_strcmp(argv[i], "--width")) {
@@ -186,7 +193,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 
-	window = SDL_CreateWindow("SDL3 Template", width, height, SDL_WINDOW_OPENGL);
+	window
+		= SDL_CreateWindow("SDL3 Template", width, height, SDL_WINDOW_OPENGL);
 	context = SDL_GL_CreateContext(window);
 
 	{
@@ -199,12 +207,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 	}
 
 	const GLubyte *version = glGetString(GL_VERSION);
-
 	if (version == 0) {
 		GPU_ERROR("Unable to get OpenGL ES version string: %d\n", glGetError());
 		return SDL_APP_FAILURE;
 	}
-
 	SDL_Log("Version string: %s\n", version);
 
 	if (!init_graphics()) {
@@ -240,6 +246,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 }
 
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
-	SDL_DestroyWindow(window);
+	glDeleteVertexArrays(1, &gl.vertex_array);
+	glDeleteBuffers(1, &gl.tri_buffer);
+	glDeleteProgram(gl.program);
 	SDL_GL_DestroyContext(context);
+	SDL_DestroyWindow(window);
 }
