@@ -76,6 +76,52 @@
 	  </div>
 	</div>
     <script type='text/javascript'>
+	  class BitWriter {
+		  constructor(length) {
+			  this.array = new Uint8Array(length);
+			  this.byte = 0;
+			  this.subbyte = 0;
+		  }
+		  write7(from) {
+			  from <<= 1;
+			  this.array[this.byte] |= from >> this.subbyte;
+			  // This will index out of bounds on the last byte.
+			  // Luckily it just ignores index out of bounds.
+			  this.array[this.byte + 1] |= from << (8 - this.subbyte);
+			  this.subbyte = (this.subbyte + 7) % 8;
+			  this.byte += this.subbyte >= 7 ? 0 : 1;
+		  }
+	  }
+	  const illegal_table = [
+		  "\0", "\r", "\n", "\"",
+		  "'", "`", "$", "\\",
+		  "&", ">", "<",
+	  ].map(e => e.charCodeAt(0));
+	  const FIRST_BYTE_MASK = 0b00011110;
+	  const SECOND_BYTE_MASK = 0b00111111;
+	  // Useful for embedding data straight into JS.
+	  // Could be used with Module::wasmBinary to pack everything in one file.
+	  function base128_decode(string) {
+		  var base128 = new TextEncoder().encode(string);
+		  var raw_length =
+			  base128.length * 7/8
+			  - (base128[base128.length - 1] & 0xF);
+		  var encoded_length = Math.ceil(raw_length * 8/7);
+		  var data = new BitWriter(raw_length);
+		  for (var i = 0; i < encoded_length; ++i) {
+	          if (base128[i] < 128) {
+				  data.write7(base128[i]);
+			  } else {
+				  data.write7(illegal_table[(base128[i] & FIRST_BYTE_MASK) >> 1]);
+				  ++i;
+				  if (i < encoded_length)
+					  data.write7(((base128[i -  1] & 1) << 6)
+								  | (base128[i] & SECOND_BYTE_MASK));
+			  }
+		  }
+		  return data.array;
+	  }
+
 	  const urlParams = new URLSearchParams(window.location.search);
 	  const width = urlParams.get('width') ?? '800';
 	  const height = urlParams.get('height') ?? '600';
@@ -96,6 +142,7 @@
 	  function set_hidden(elt, state) {
 		  elt.style['visibility'] = state ? 'hidden' : null;
 	  }
+
       var Module = {
 		  arguments: ['--width', width, '--height', height],
 		  print(...args) {
