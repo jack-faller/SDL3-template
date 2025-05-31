@@ -1,4 +1,6 @@
 #include <memory.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 // Padding scheme:
@@ -7,9 +9,10 @@
 // padding there was. For input [1, 2], padded would be [1, 2, 5, 5, 5, 5, 5].
 // A multiple of 7 input would be padded with 7s.
 
-// You can have 16 of these.
+// You can have 15 of these.
 // They are encoded as the first three bytes of a UTF-8 2 byte point.
 // So 110xxxxy 10yyyyyy where x is the illegal char and y is the next.
+// At least one of the x bits must be set, hence why code 0 is invalid.
 // This is designed to avoid all HTML and JS special characters.
 // Also, the implementation would break if any character in 1..8 is used here.
 int illegal_table[128] = {
@@ -26,7 +29,7 @@ void write_char(int c) {
 	if (previous != -1) {
 		int code = illegal_table[previous];
 		if (code) {
-			putchar(FIRST_BYTE | ((code - 1) << 1) | (c >> 6));
+			putchar(FIRST_BYTE | (code << 1) | (c >> 6));
 			putchar(SECOND_BYTE | (SECOND_BYTE_MASK & c));
 			previous = -1;
 			return;
@@ -37,7 +40,7 @@ void write_char(int c) {
 	previous = c;
 }
 
-char buffer[7];
+uint8_t buffer[7];
 
 void write_buffer() {
 	write_char(buffer[0] >> 1);
@@ -49,11 +52,17 @@ void write_buffer() {
 }
 
 int main(int argc, char **argv) {
+	FILE *input = stdin;
+	if (argc == 2)
+		input = fopen(argv[1], "r");
+
 	int read_count;
-	while ((read_count = fread(buffer, 1, 7, stdin)) == 7)
+	while ((read_count = fread(buffer, 1, 7, input)) == 7)
 		write_buffer();
 	int padding_count = 7 - read_count;
 	memset(&buffer[read_count], padding_count, padding_count);
 	write_buffer();
 	write_char(-1);
+	if (input != stdin)
+		fclose(input);
 }
