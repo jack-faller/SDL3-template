@@ -43,9 +43,9 @@
 		  from {transform: rotate(0deg);}
 		  to {transform: rotate(360deg);}
       }
-	  html, body, .stack {
-		  height: 100%;
-		  width: 100%;
+	  html, body, .stack, #canvas {
+		  height: 100vh;
+		  width: 100vw;
 	  }
 	  .stack {
 		  display: grid;
@@ -62,17 +62,14 @@
 		  margin: 0;
 		  bordeh: 0;
 	  }
-	  .no-mouse {
-		  pointer-events: none;
-	  }
     </style>
   </head>
   <body>
     <div class='stack'>
 	  <canvas class='emscripten' id='canvas' oncontextmenu='event.preventDefault()' tabindex=-1></canvas>
-	  <div class="no-mouse">
+	  <div id='status'>
 		<figure style='overflow:visible;' id='spinner'><div class='spinner'></div></figure>
-		<div class='emscripten' id='status'>Loading...</div>
+		<div class='emscripten' id='message'>Loading...</div>
 		<div class='emscripten'>
 		  <progress value='0' max='100' id='progress' style='visibility: hidden;'></progress>
 		</div>
@@ -128,15 +125,12 @@
 	  }
 
 	  const urlParams = new URLSearchParams(window.location.search);
-	  const width = urlParams.get('width') ?? '800';
-	  const height = urlParams.get('height') ?? '600';
       var statusElement = document.getElementById('status');
+      var messageElement = document.getElementById('message');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
 	  var canvasElement = document.getElementById('canvas');
 
-	  canvasElement.width = width;
-	  canvasElement.height = height;
       // As a default initial behavior, pop up an alert when webgl context is lost. To make your
       // application robust, you may want to override this behavior before shipping!
       // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
@@ -149,7 +143,6 @@
 	  }
 	  var data_urls = {};
       var Module = {
-		  arguments: ['--width', width, '--height', height],
 		  print(...args) {
 			  console.log(...args);
 		  },
@@ -169,18 +162,16 @@
 				  text = m[1];
 				  progressElement.value = parseInt(m[2])*100;
 				  progressElement.max = parseInt(m[4])*100;
-				  set_hidden(progress, false);
-				  set_hidden(spinner, false);
+				  set_hidden(progressElement, false);
+				  set_hidden(spinnerElement, false);
 			  } else {
 				  progressElement.value = null;
 				  progressElement.max = null;
 				  set_hidden(progressElement, true);
-				  if (!text) set_hidden(spinner, true);
+				  if (!text) set_hidden(spinnerElement, true);
 			  }
-			  if (text === '')
-				  set_hidden(statusElement, true);
-			  else
-				  statusElement.innerHTML = text;
+			  statusElement.style['display'] = text === '' ? 'none' : null;
+			  messageElement.innerHTML = text;
 		  },
 		  totalDependencies: 0,
 		  monitorRunDependencies(left) {

@@ -215,7 +215,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
 
 	window
-		= SDL_CreateWindow("SDL3 Template", width, height, SDL_WINDOW_OPENGL);
+		= SDL_CreateWindow("SDL3 Template", width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 	context = SDL_GL_CreateContext(window);
 
 	{
