@@ -123,20 +123,6 @@
 		  }
 		  return data.array;
 	  }
-	  // data_strings[FILE_NAME] = { type: MIME_TYPE, text: BASE128_STRING }
-	  var data_strings = {
-		  // !! DATA_STRINGS !!
-	  };
-	  var data_urls = {};
-	  function try_get_data_url(file) {
-		  if (data_urls[file])
-			  return data_urls[file];
-		  var s = data_strings[file];
-		  if (!s) return null;
-		  return data_urls[file] = URL.createObjectURL(
-			  new Blob([base128_decode(s.text)], { type: s.type })
-		  );
-	  }
 
 	  const urlParams = new URLSearchParams(window.location.search);
 	  const width = urlParams.get('width') ?? '800';
@@ -158,13 +144,14 @@
 	  function set_hidden(elt, state) {
 		  elt.style['visibility'] = state ? 'hidden' : null;
 	  }
+	  var data_urls = {};
       var Module = {
 		  arguments: ['--width', width, '--height', height],
 		  print(...args) {
 			  console.log(...args);
 		  },
 		  locateFile(path, prefix) {
-			  return try_get_data_url(path) ?? prefix + path;
+			  return data_urls[path] ?? prefix + path;
 		  },
 		  canvas: canvasElement,
 		  setStatus(text) {
@@ -206,6 +193,32 @@
 			  if (text) console.error('[post-exception status] ' + text);
 		  };
 	  };
+
+	  // data_strings = [{ name: NAME, type: MIME_TYPE, text: BASE128_STRING }, ...]
+	  var data_strings = [
+		  // !! DATA_STRINGS !!
+	  ];
+	  async function init_urls() {
+		  for (var string of data_strings) {
+			  data_urls[string.name] = URL.createObjectURL(
+				  await new Response(
+					  new Blob([base128_decode(string.text)])
+						  .stream()
+						  .pipeThrough(new DecompressionStream("gzip")))
+					  .blob()
+					  .then(b => b.slice(0, b.size, string.type))
+			  );
+		  }
+	  }
+	  init_urls().then(() => {
+		  var script_url = data_urls['script.js'];
+		  if (script_url) {
+			  var script = document.createElement('script');
+			  script.async = true;
+			  script.src = script_url;
+			  document.body.append(script);
+		  }
+	  });
 	</script>
 	{{{ SCRIPT }}}
   </body>

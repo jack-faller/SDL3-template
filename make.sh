@@ -7,6 +7,10 @@ SELF="$(basename "$0")"
 NL="
 "
 
+docker_run () {
+	docker run --rm --network=host --interactive --tty --volume "$(pwd):/proj" --workdir /proj --user $UID:$GID emscripten/emsdk "$@"
+}
+
 NAME="$(grep '^project(.*)$' CMakeLists.txt | sed 's/^project(\(.*\))$/\1/')"
 while [ $# != 0 ]; do
 	case "$1" in
@@ -16,8 +20,7 @@ while [ $# != 0 ]; do
 				shift
 				RELEASE="--release"
 			fi
-			docker run --rm --network=host --interactive --tty --volume "$(pwd):/proj" --user $UID:$GID emscripten/emsdk \
-				   "/proj/$SELF" generic emscripten "$RELEASE"
+			docker_run "/proj/$SELF" generic emscripten "$RELEASE"
 			;;
 		glad)
 			glad --api='gles2=3.0' --out-path=libraries/glad
@@ -60,20 +63,18 @@ while [ $# != 0 ]; do
 				shift
 				DIR=emscripten-release/Release
 			fi
-			gcc base128-encode.c -o emscripten-build/base128-encode
+			gcc tools/base128-encode.c -o emscripten-build/base128-encode
 			cp "src/shell.html" "$DIR/$NAME-pack.html"
 			add_pack_file() {
-				(echo -n "	'$2': { type: '$1', text: '"
-				 ./emscripten-build/base128-encode "$DIR/$2"
+				(echo -n "	{ name: '${3-$2}', type: '$1', text: '"
+				 gzip --to-stdout "$DIR/$2" | ./emscripten-build/base128-encode
 				 echo "' },"
 				) | sed '/!! DATA_STRINGS !!/r /dev/stdin' -i "$DIR/$NAME-pack.html"
 			}
 			add_pack_file application/wasm "$NAME.wasm"
 			add_pack_file application/octet-stream "$NAME.data"
-			(echo "<script>"
-			 cat "$DIR/$NAME.js"
-			 echo "</script>"
-			) | sed "/{{{ SCRIPT }}}/{r /dev/stdin$NL d}" -i "$DIR/$NAME-pack.html"
+			add_pack_file application/javascript "$NAME.js" "script.js"
+			sed '/{{{ SCRIPT }}}/d' -i "$DIR/$NAME-pack.html"
 			;;
 	esac
 	shift
