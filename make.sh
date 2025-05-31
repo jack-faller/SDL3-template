@@ -4,6 +4,8 @@ set -ex
 
 cd "$(dirname "$(which $0)")"
 SELF="$(basename "$0")"
+NL="
+"
 
 NAME="$(grep '^project(.*)$' CMakeLists.txt | sed 's/^project(\(.*\))$/\1/')"
 while [ $# != 0 ]; do
@@ -35,7 +37,6 @@ while [ $# != 0 ]; do
 			RELEASE=-DCMAKE_BUILD_TYPE=Debug
 			DIR="$TARGET"-build
 			if [ "$TYPE" = --release ]; then
-				shift
 				RELEASE=-DCMAKE_BUILD_TYPE=Release
 				DIR="$TARGET"-release
 			fi
@@ -53,12 +54,26 @@ while [ $# != 0 ]; do
 			shift
 			exec "./linux-build/$NAME" "$@"
 			;;
-		string-sub)
+		pack)
+			DIR=emscripten-build/Debug
+			if [ "$2" = --release ]; then
+				shift
+				DIR=emscripten-release/Release
+			fi
 			gcc base128-encode.c -o emscripten-build/base128-encode
-			(echo -n "	'$NAME.wasm': '"
-			 ./emscripten-build/base128-encode "emscripten-build/Debug/$NAME.wasm"
-			 echo -n "'"
-			) | sed '/!! DATA_STRINGS !!/r /dev/stdin' "emscripten-build/Debug/$NAME.html" > "emscripten-build/Debug/$NAME-pack.html"
+			cp "src/shell.html" "$DIR/$NAME-pack.html"
+			add_pack_file() {
+				(echo -n "	'$2': { type: '$1', text: '"
+				 ./emscripten-build/base128-encode "$DIR/$2"
+				 echo "' },"
+				) | sed '/!! DATA_STRINGS !!/r /dev/stdin' -i "$DIR/$NAME-pack.html"
+			}
+			add_pack_file application/wasm "$NAME.wasm"
+			add_pack_file application/octet-stream "$NAME.data"
+			(echo "<script>"
+			 cat "$DIR/$NAME.js"
+			 echo "</script>"
+			) | sed "/{{{ SCRIPT }}}/{r /dev/stdin$NL d}" -i "$DIR/$NAME-pack.html"
 			;;
 	esac
 	shift

@@ -69,7 +69,7 @@
 	  <canvas class='emscripten' id='canvas' oncontextmenu='event.preventDefault()' tabindex=-1></canvas>
 	  <div>
 		<figure style='overflow:visible;' id='spinner'><div class='spinner'></div></figure>
-		<div class='emscripten' id='status'>Downloading...</div>
+		<div class='emscripten' id='status'>Loading...</div>
 		<div class='emscripten'>
 		  <progress value='0' max='100' id='progress' style='visibility: hidden;'></progress>
 		</div>
@@ -123,18 +123,19 @@
 		  }
 		  return data.array;
 	  }
+	  // data_strings[FILE_NAME] = { type: MIME_TYPE, text: BASE128_STRING }
 	  var data_strings = {
 		  // !! DATA_STRINGS !!
 	  };
 	  var data_urls = {};
 	  function try_get_data_url(file) {
-	     return data_urls[file] ?? (
-			 data_strings[file]
-				 ? data_urls[file] = URL.createObjectURL(
-					 new Blob(base128_decode(data_strings[file]),
-							  { type: 'application/wasm' })
-				 )
-				 : null);
+		  if (data_urls[file])
+			  return data_urls[file];
+		  var s = data_strings[file];
+		  if (!s) return null;
+		  return data_urls[file] = URL.createObjectURL(
+			  new Blob([base128_decode(s.text)], { type: s.type })
+		  );
 	  }
 
 	  const urlParams = new URLSearchParams(window.location.search);
@@ -164,7 +165,7 @@
 		  },
 		  locateFile(path, prefix) {
 			  return try_get_data_url(path) ?? prefix + path;
-h	  },
+		  },
 		  canvas: canvasElement,
 		  setStatus(text) {
 			  Module.setStatus.last ??= { time: Date.now(), text: '' };
