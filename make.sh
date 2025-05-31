@@ -1,5 +1,6 @@
 #!/bin/sh
-set -exo pipefail
+sh -c 'set -o pipefail' && set -o pipefail
+set -ex
 
 cd "$(dirname "$(which $0)")"
 SELF="$(basename "$0")"
@@ -38,26 +39,26 @@ while [ $# != 0 ]; do
 				RELEASE=-DCMAKE_BUILD_TYPE=Release
 				DIR="$TARGET"-release
 			fi
-			if ! [ -e "$DIR" ]; then
-				if [ "$TARGET" = emscripten ]; then
-					emcmake cmake "$RELEASE" -S . -B "$DIR"
-				else
-					cmake "$RELEASE" -S . -B "$DIR"
-				fi
+			if [ "$TARGET" = emscripten ]; then
+				emcmake cmake "$RELEASE" -S . -B "$DIR"
+				cd "$DIR"
+				emmake make --jobs "$(nproc)"
+				cd -
+			else
+				[ -e "$DIR" ] || cmake "$RELEASE" -S . -B "$DIR"
+				cmake --build "$DIR" --parallel "$(nproc)"
 			fi
-			cmake --build "$DIR" --parallel "$(nproc)"
 			;;
 		run)
 			shift
 			exec "./linux-build/$NAME" "$@"
 			;;
 		string-sub)
-			REPLACE="$(grep WASM_STRING emscripten-build/$NAME.html)"
 			gcc base128-encode.c -o emscripten-build/base128-encode
-			(echo "$REPLACE" | sed 's/\(.*\)WASM_STRING.*/\1/' | tr -d '\n'
-			 emscripten-build/base128-encode "emscripten-build/$NAME.wasm"
-			 echo "$REPLACE" | sed 's/.*WASM_STRING\(.*\)/\1/' | tr -d '\n') | sed '/WASM_STRING/{r /dev/stdin
-d }' "emscripten-build/$NAME.html" > "emscripten-build/$NAME-pack.html"
+			(echo -n "	'$NAME.wasm': '"
+			 ./emscripten-build/base128-encode "emscripten-build/$NAME.wasm"
+			 echo -n "'"
+			) | sed '/!! DATA_STRINGS !!/r /dev/stdin' "emscripten-build/$NAME.html" > "emscripten-build/$NAME-pack.html"
 			;;
 	esac
 	shift
