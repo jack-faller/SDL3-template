@@ -93,6 +93,8 @@
 		  }
 	  }
 	  const illegal_table = [
+		  // Tags start at one so put filler in slot 0.
+		  "IGNORE",
 		  "\0", "\r", "\n", "\"",
 		  "'", "`", "$", "\\",
 		  "&", ">", "<",
@@ -142,7 +144,6 @@
 	  function set_hidden(elt, state) {
 		  elt.style['visibility'] = state ? 'hidden' : null;
 	  }
-
       var Module = {
 		  arguments: ['--width', width, '--height', height],
 		  print(...args) {
@@ -185,7 +186,10 @@
 			  Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
 		  }
 	  };
-	  Module.setStatus('Downloading...');
+	  var wasmString = "WASM_STRING";
+	  if (wasmString !== "WASM_" + "STRING")
+		  Module["wasmBinary"] = base128_decode(wasmString);
+	  Module.setStatus('Loading...');
 	  window.onerror = () => {
 		  Module.setStatus('Exception thrown, see JavaScript console');
 		  set_hidden(spinnerElement, true);
