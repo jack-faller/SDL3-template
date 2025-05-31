@@ -251,7 +251,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 	SDL_GetMouseState(&x, &y);
 	glUniform2f(gl.mouse_position_uniform, x + 0.5, y + 0.5);
 	glUniform2f(gl.window_size_uniform, width, height);
-	glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(GLfloat));
+	glDrawArrays(GL_TRIANGLES, 0,  6);
 	SDL_GL_SwapWindow(window);
 
 	return SDL_APP_CONTINUE;
