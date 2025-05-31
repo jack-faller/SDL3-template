@@ -49,8 +49,7 @@ while [ $# != 0 ]; do
 			;;
 		run)
 			shift
-			"./linux-build/$NAME" "$@"
-			exit
+			exec "./linux-build/$NAME" "$@"
 			;;
 		string-sub)
 			REPLACE="$(grep WASM_STRING emscripten-build/$NAME.html)"
