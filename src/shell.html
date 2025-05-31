@@ -62,12 +62,15 @@
 		  margin: 0;
 		  bordeh: 0;
 	  }
+	  .no-mouse {
+		  pointer-events: none;
+	  }
     </style>
   </head>
   <body>
     <div class='stack'>
 	  <canvas class='emscripten' id='canvas' oncontextmenu='event.preventDefault()' tabindex=-1></canvas>
-	  <div>
+	  <div class="no-mouse">
 		<figure style='overflow:visible;' id='spinner'><div class='spinner'></div></figure>
 		<div class='emscripten' id='status'>Loading...</div>
 		<div class='emscripten'>
