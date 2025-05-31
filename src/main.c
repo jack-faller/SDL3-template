@@ -6,8 +6,11 @@
 
 SDL_GLContext context;
 SDL_Window *window;
+int width = 800, height = 600;
+
 struct {
 	GLuint program, tri_buffer, vertex_array;
+	GLuint time_uniform, mouse_position_uniform, window_size_uniform;
 } gl;
 
 #define GPU_ERROR(...) SDL_LogError(SDL_LOG_CATEGORY_GPU, __VA_ARGS__)
@@ -105,9 +108,19 @@ GLuint link_program(GLuint vertex_shader, GLuint fragment_shader) {
 	return program;
 }
 
+GLfloat vertices[][3][3] = {
+	{
+		{ -1, 1, 0 },
+		{ -1, -1, 0 },
+		{ 1, -1, 0 },
+	},
+	{
+		{ 1, -1, 0 },
+		{ 1, 1, 0 },
+		{ -1, 1, 0 },
+	},
+};
 GLuint load_tri() {
-	GLfloat vertices[] = { -0.7, -0.7, 0, 0.7, -0.7, 0, 0, 0.7, 0 };
-
 	GLuint buffer;
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
@@ -141,6 +154,12 @@ bool init_graphics() {
 	glDeleteShader(fragment_shader);
 	if (gl.program == 0)
 		return false;
+#define SET_UNIFOM(NAME) \
+	gl.NAME##_uniform = glGetUniformLocation(gl.program, #NAME)
+	SET_UNIFOM(time);
+	SET_UNIFOM(mouse_position);
+	SET_UNIFOM(window_size);
+#undef SET_UNIFOM
 
 	GLuint pos_attribute = glGetAttribLocation(gl.program, "pos");
 
@@ -180,7 +199,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 		GPU_ERROR("Couldn't initialise video output: %s\n", SDL_GetError());
 		return SDL_APP_FAILURE;
 	}
-	int width = 800, height = 600;
 	for (int i = 1; i < argc; ++i) {
 		if (0 == SDL_strcmp(argv[i], "--width")) {
 			width = update_uint_variable("--width", argv[++i], width);
@@ -192,6 +210,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
 
 	window
 		= SDL_CreateWindow("SDL3 Template", width, height, SDL_WINDOW_OPENGL);
@@ -222,8 +243,15 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv) {
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
+
 	glClear(GL_COLOR_BUFFER_BIT);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	glUniform1f(gl.time_uniform, SDL_GetTicks() / 1000.0);
+	float x, y;
+	SDL_GetMouseState(&x, &y);
+	glUniform2f(gl.mouse_position_uniform, x + 0.5, y + 0.5);
+	glUniform2f(gl.window_size_uniform, width, height);
+	glDrawArrays(GL_TRIANGLES, 0, sizeof(vertices) / sizeof(GLfloat));
 	SDL_GL_SwapWindow(window);
 
 	return SDL_APP_CONTINUE;
@@ -238,7 +266,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 	case SDL_EVENT_WINDOW_ENTER_FULLSCREEN: fullscreen = true; break;
 	case SDL_EVENT_WINDOW_LEAVE_FULLSCREEN: fullscreen = false; break;
 	case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-		glViewport(0, 0, event->window.data1, event->window.data2);
+		glViewport(
+			0, 0, width = event->window.data1, height = event->window.data2
+		);
 		break;
 	case SDL_EVENT_QUIT: return SDL_APP_SUCCESS;
 	}

@@ -7,7 +7,20 @@ precision highp int;
 precision lowp sampler2D;
 precision lowp samplerCube;
 
+uniform float time;
+uniform vec2 mouse_position;
+uniform vec2 window_size;
+
 layout (location = 0) out vec4 frag_color;
+layout (origin_upper_left) in vec4 gl_FragCoord;
+
+const float ring_count = 20.0;
+
 void main() {
-  frag_color = vec4(1, 0, 1, 1);
+  float mouse_pixel_distance = length(mouse_position - gl_FragCoord.xy);
+  float min_win = min(window_size.x, window_size.y);
+  float d = min_win/mouse_pixel_distance/ring_count + fract(time / 10.0);
+  d = fract(round(ring_count * d) / ring_count);
+  d = abs(d * 2.0 - 1.0);
+  frag_color = vec4(d, d, d, 1);
 }
