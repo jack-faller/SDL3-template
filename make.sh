@@ -56,9 +56,9 @@ while [ $# != 0 ]; do
 		string-sub)
 			gcc base128-encode.c -o emscripten-build/base128-encode
 			(echo -n "	'$NAME.wasm': '"
-			 ./emscripten-build/base128-encode "emscripten-build/$NAME.wasm"
+			 ./emscripten-build/base128-encode "emscripten-build/Debug/$NAME.wasm"
 			 echo -n "'"
-			) | sed '/!! DATA_STRINGS !!/r /dev/stdin' "emscripten-build/$NAME.html" > "emscripten-build/$NAME-pack.html"
+			) | sed '/!! DATA_STRINGS !!/r /dev/stdin' "emscripten-build/Debug/$NAME.html" > "emscripten-build/Debug/$NAME-pack.html"
 			;;
 	esac
 	shift

@@ -123,6 +123,19 @@
 		  }
 		  return data.array;
 	  }
+	  var data_strings = {
+		  // !! DATA_STRINGS !!
+	  };
+	  var data_urls = {};
+	  function try_get_data_url(file) {
+	     return data_urls[file] ?? (
+			 data_strings[file]
+				 ? data_urls[file] = URL.createObjectURL(
+					 new Blob(base128_decode(data_strings[file]),
+							  { type: 'application/wasm' })
+				 )
+				 : null);
+	  }
 
 	  const urlParams = new URLSearchParams(window.location.search);
 	  const width = urlParams.get('width') ?? '800';
@@ -147,13 +160,11 @@
       var Module = {
 		  arguments: ['--width', width, '--height', height],
 		  print(...args) {
-			  // These replacements are necessary if you render to raw HTML
-			  //text = text.replace(/&/g, '&amp;');
-			  //text = text.replace(/</g, '&lt;');
-			  //text = text.replace(/>/g, '&gt;');
-			  //text = text.replace('\n', '<br>', 'g');
 			  console.log(...args);
 		  },
+		  locateFile(path, prefix) {
+			  return try_get_data_url(path) ?? prefix + path;
+h	  },
 		  canvas: canvasElement,
 		  setStatus(text) {
 			  Module.setStatus.last ??= { time: Date.now(), text: '' };
@@ -186,9 +197,6 @@
 			  Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
 		  }
 	  };
-	  var wasmString = "WASM_STRING";
-	  if (wasmString !== "WASM_" + "STRING")
-		  Module["wasmBinary"] = base128_decode(wasmString);
 	  Module.setStatus('Loading...');
 	  window.onerror = () => {
 		  Module.setStatus('Exception thrown, see JavaScript console');
