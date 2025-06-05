@@ -4,40 +4,52 @@
 #define SDL_MAIN_USE_CALLBACKS
 #include <SDL3/SDL_main.h>
 
-#include <optional>
 #include <vector>
 
 #define CONSTRUCTORS(NAME) \
 	NAME(NAME &) = delete; \
 	NAME(NAME &&) = default
 
-std::optional<std::vector<Uint8>>
-storage_read(SDL_Storage *storage, const char *path) {
-	Uint64 length;
-	if (SDL_GetStorageFileSize(storage, path, &length) && length > 0) {
-		std::vector<Uint8> out(length);
-		if (SDL_ReadStorageFile(storage, path, &out[0], length)) {
-			return out;
-		} else {
-			SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "IO loading: %s\n", path);
-			return std::optional<std::vector<Uint8>>();
-		}
-	} else {
-		SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "Asset not found: %s\n", path);
-		return std::optional<std::vector<Uint8>>();
-	}
-}
+const char *organisation_name = "com.example";
+const char *app_name = "SDL3-template";
 
-std::optional<std::vector<Uint8>> title_storage_read(const char *path) {
-	SDL_Storage *storage = SDL_OpenTitleStorage(NULL, 0);
-	if (storage == NULL)
-		return std::optional<std::vector<Uint8>>();
-	while (!SDL_StorageReady(storage))
-		SDL_Delay(1);
-	std::optional<std::vector<Uint8>> out = storage_read(storage, path);
-	SDL_CloseStorage(storage);
-	return out;
-}
+struct Storage {
+	CONSTRUCTORS(Storage);
+	struct Error {};
+	enum Type { USER, TITLE };
+	SDL_Storage *storage;
+	Storage(Type type)
+		: storage([](Type type) {
+			  SDL_Storage *out
+				  = type == TITLE
+		                ? SDL_OpenTitleStorage(nullptr, 0)
+		                : SDL_OpenUserStorage(organisation_name, app_name, 0);
+			  if (out == nullptr)
+				  throw Error();
+			  return out;
+		  }(type)) {
+		while (!SDL_StorageReady(storage))
+			SDL_Delay(1);
+	}
+	~Storage() { SDL_CloseStorage(storage); }
+	std::vector<Uint8> read(const char *path) {
+		Uint64 length;
+		if (SDL_GetStorageFileSize(storage, path, &length) && length > 0) {
+			std::vector<Uint8> out(length);
+			if (SDL_ReadStorageFile(storage, path, &out[0], length)) {
+				return out;
+			} else {
+				SDL_LogError(SDL_LOG_CATEGORY_SYSTEM, "IO loading: %s\n", path);
+				throw Error();
+			}
+		} else {
+			SDL_LogError(
+				SDL_LOG_CATEGORY_SYSTEM, "Asset not found: %s\n", path
+			);
+			throw Error();
+		}
+	}
+};
 
 #define GPU_ERROR(...) SDL_LogError(SDL_LOG_CATEGORY_GPU, __VA_ARGS__)
 struct InitialisationError {};
@@ -78,14 +90,17 @@ struct VertexArray {
 struct Shader {
 	CONSTRUCTORS(Shader);
 	const GLuint handle;
-	Shader(const char *source_path, GLenum type)
-		: handle([](const char *source_path, GLenum type) {
-			  std::optional<std::vector<Uint8>> source
-				  = title_storage_read(source_path);
-			  if (!source.has_value())
-				  throw InitialisationError();
-			  const GLchar *sources[] = { (const GLchar *)&(*source)[0] };
-			  const GLint lengths[] = { (GLint)source->size() };
+	Shader(Storage &storage, const char *source_path, GLenum type)
+		: handle([](Storage &storage, const char *source_path, GLenum type) {
+			  std::vector<Uint8> source = [&]() {
+				  try {
+					  return storage.read(source_path);
+				  } catch (Storage::Error) {
+					  throw InitialisationError();
+				  }
+			  }();
+			  const GLchar *sources[] = { (const GLchar *)&source[0] };
+			  const GLint lengths[] = { (GLint)source.size() };
 
 			  GLuint shader = glCreateShader(type);
 			  if (shader == 0) {
@@ -111,7 +126,7 @@ struct Shader {
 				  throw InitialisationError();
 			  }
 			  return shader;
-		  }(source_path, type)) {}
+		  }(storage, source_path, type)) {}
 	~Shader() { glDeleteShader(handle); }
 };
 struct Uniform {
@@ -195,6 +210,7 @@ GLfloat vertices[][3][3] = {
 
 struct AppState {
 	int width, height;
+	Storage game_files;
 	SDL_Window *window;
 	SDL_GLContext context;
 	gl::Program program;
@@ -204,7 +220,14 @@ struct AppState {
 	bool fullscreen = false;
 
 	AppState(int width, int height)
-		: width(width), height(height),
+		: width(width), height(height), game_files([]() {
+			  try {
+				  auto x = Storage(Storage::USER);
+				  return Storage(Storage::TITLE);
+			  } catch (Storage::Error) {
+				  throw InitialisationError();
+			  }
+		  }()),
 		  window(SDL_CreateWindow(
 			  "SDL3 Template",
 			  width,
@@ -236,8 +259,12 @@ struct AppState {
 			  return context;
 		  }(this->window)),
 		  program(
-			  gl::Shader("assets/shaders/shader.vert", GL_VERTEX_SHADER),
-			  gl::Shader("assets/shaders/shader.frag", GL_FRAGMENT_SHADER)
+			  gl::Shader(
+				  game_files, "assets/shaders/shader.vert", GL_VERTEX_SHADER
+			  ),
+			  gl::Shader(
+				  game_files, "assets/shaders/shader.frag", GL_FRAGMENT_SHADER
+			  )
 		  ),
 		  time(program.get_uniform("time")),
 		  mouse_position(program.get_uniform("mouse_position")),
@@ -296,7 +323,7 @@ struct AppState {
 int update_uint_variable(
 	const char *name, const char *new_value, int old_value
 ) {
-	char *error_char = NULL;
+	char *error_char = nullptr;
 	int value = SDL_strtoul(new_value, &error_char, 0);
 	if (error_char != new_value + SDL_strlen(new_value)
 	    || error_char == new_value) {
@@ -341,6 +368,4 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 	return ((AppState *)appstate)->event(event);
 }
-void SDL_AppQuit(void *appstate, SDL_AppResult) {
-	delete (AppState *)appstate;
-}
+void SDL_AppQuit(void *appstate, SDL_AppResult) { delete (AppState *)appstate; }
