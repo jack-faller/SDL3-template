@@ -6,15 +6,15 @@
 
 #include <vector>
 
-#define CONSTRUCTORS(NAME) \
-	NAME(NAME &) = delete; \
-	NAME(NAME &&) = default
+#define DELETE_COPY(NAME) \
+	NAME(const NAME &) = delete; \
+	NAME &operator=(const NAME &) = delete
 
 const char *organisation_name = "com.example";
 const char *app_name = "SDL3-template";
 
 struct Storage {
-	CONSTRUCTORS(Storage);
+	DELETE_COPY(Storage);
 	struct Error {};
 	enum Type { USER, TITLE };
 	SDL_Storage *storage;
@@ -56,7 +56,7 @@ struct InitialisationError {};
 
 namespace gl {
 struct Buffer {
-	CONSTRUCTORS(Buffer);
+	DELETE_COPY(Buffer);
 	const GLuint handle;
 	Buffer()
 		: handle([]() {
@@ -74,7 +74,7 @@ struct Buffer {
 	}
 };
 struct VertexArray {
-	CONSTRUCTORS(VertexArray);
+	DELETE_COPY(VertexArray);
 	const GLuint handle;
 	static GLuint genBuffer() {
 		GLuint out;
@@ -88,7 +88,7 @@ struct VertexArray {
 };
 
 struct Shader {
-	CONSTRUCTORS(Shader);
+	DELETE_COPY(Shader);
 	const GLuint handle;
 	Shader(Storage &storage, const char *source_path, GLenum type)
 		: handle([](Storage &storage, const char *source_path, GLenum type) {
@@ -158,7 +158,7 @@ struct Attribute {
 	void disable() const { glDisableVertexAttribArray(index); }
 };
 struct Program {
-	CONSTRUCTORS(Program);
+	DELETE_COPY(Program);
 	const GLuint handle;
 	Program(const Shader &vertex, const Shader &fragment)
 		: handle([](GLuint vertex_shader, GLuint fragment_shader) {
