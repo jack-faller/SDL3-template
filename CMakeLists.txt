@@ -20,7 +20,7 @@ endif()
 
 add_subdirectory(libraries/glad/)
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.[ch])
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.[ch]pp)
 add_executable(${EXECUTABLE_NAME} WIN32 ${SOURCES})
 
 if(EMSCRIPTEN)

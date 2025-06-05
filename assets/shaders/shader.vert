@@ -6,7 +6,7 @@ precision highp int;
 precision lowp sampler2D;
 precision lowp samplerCube;
 
-in vec3 pos;
+in vec3 position;
 void main() {
-  gl_Position = vec4(pos, 1);
+  gl_Position = vec4(position, 1);
 }
