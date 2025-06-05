@@ -72,7 +72,7 @@ struct VertexArray {
 	VertexArray() : handle(genBuffer()) {}
 	~VertexArray() { glDeleteVertexArrays(1, &handle); }
 	void bind() const { glBindVertexArray(handle); }
-	static void unbind(GLenum target) { glBindVertexArray(0); }
+	static void unbind() { glBindVertexArray(0); }
 };
 
 struct Shader {
@@ -250,21 +250,23 @@ struct AppState {
 		gl::Attribute position = program.get_attribute("position");
 
 		vertex_input.bind();
-
 		position.attribute(tris, 3, GL_FLOAT, false, 0, 0);
 		position.enable();
+		gl::VertexArray::unbind();
 
 		program.use();
 	}
 	SDL_AppResult iterate() {
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		vertex_input.bind();
 		time.value_1f(SDL_GetTicks() / 1000.0);
 		float x, y;
 		SDL_GetMouseState(&x, &y);
 		mouse_position.value_2f(x + 0.5, y + 0.5);
 		window_size.value_2f(width, height);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
+
 		SDL_GL_SwapWindow(window);
 
 		return SDL_APP_CONTINUE;
