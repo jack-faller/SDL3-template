@@ -42,4 +42,10 @@ else()
 	add_dependencies(${EXECUTABLE_NAME} assets)
 endif()
 
+if(MSVC)
+  target_compile_options(${EXECUTABLE_NAME} PRIVATE /W4 /WX)
+else()
+  target_compile_options(${EXECUTABLE_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC SDL3::SDL3 glad)

@@ -53,11 +53,11 @@ struct Buffer {
 			  return out;
 		  }()) {}
 	~Buffer() { glDeleteBuffers(1, &handle); }
-	void bind(GLenum target) const { glBindBuffer(GL_ARRAY_BUFFER, handle); }
+	void bind(GLenum target) const { glBindBuffer(target, handle); }
 	static void unbind(GLenum target) { glBindBuffer(target, 0); }
 	void data(size_t size, void *data, GLenum usage) const {
 		bind(GL_ARRAY_BUFFER);
-		glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, size, data, usage);
 		unbind(GL_ARRAY_BUFFER);
 	}
 };
@@ -194,9 +194,8 @@ GLfloat vertices[][3][3] = {
 };
 
 struct AppState {
-	// Remember to keep these in the right order for the initialiser.
-	SDL_Window *window;
 	int width, height;
+	SDL_Window *window;
 	SDL_GLContext context;
 	gl::Program program;
 	gl::Uniform time, mouse_position, window_size;
@@ -342,6 +341,6 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 	return ((AppState *)appstate)->event(event);
 }
-void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+void SDL_AppQuit(void *appstate, SDL_AppResult) {
 	delete (AppState *)appstate;
 }
