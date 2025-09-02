@@ -33,12 +33,13 @@ if(EMSCRIPTEN)
 	set_property(TARGET ${EXECUTABLE_NAME} APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/shell.html ${ASSET_SOURCES})
 else()
 	# This doesn't work in release builds.
-	add_custom_target(assets DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/assets)
+	set(AssetTargetPath ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/assets)
+	add_custom_target(assets DEPENDS ${AssetTargetPath})
 	add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/assets
+			OUTPUT ${AssetTargetPath}
 			COMMAND ${CMAKE_COMMAND} -E create_symlink
 					${CMAKE_SOURCE_DIR}/assets
-					${CMAKE_CURRENT_BINARY_DIR}/assets)
+					${AssetTargetPath})
 	add_dependencies(${EXECUTABLE_NAME} assets)
 endif()
 
