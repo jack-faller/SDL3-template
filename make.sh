@@ -14,6 +14,9 @@ docker_run () {
 NAME="$(grep '^project(.*)$' CMakeLists.txt | sed 's/^project(\(.*\))$/\1/')"
 while [ $# != 0 ]; do
 	case "$1" in
+		clean)
+			rm -rf linux-debug linux-release emscripten-debug emscripten-release
+			;;
 		web)
 			RELEASE="--debug"
 			if [ "$2" = --release ]; then
