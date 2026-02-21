@@ -84,8 +84,8 @@ while [ $# != 0 ]; do
 				SEPP=,
 				cat "$2" >> "$DIR/files.bin"
 			}
-			add_pack_file application/wasm "$DIR/$NAME.wasm"
-			add_pack_file application/octet-stream "$DIR/$NAME.data"
+			add_pack_file application/wasm "$DIR/$NAME.wasm" "$NAME.wasm"
+			add_pack_file application/octet-stream "$DIR/$NAME.data" "$NAME.data"
 			add_pack_file application/javascript "$DIR/$NAME.js" "script.js"
 			echo -n ']' >> "$DIR/manifest.json"
 			add_data () {
