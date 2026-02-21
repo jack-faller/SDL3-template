@@ -20,17 +20,17 @@ endif()
 
 add_subdirectory(libraries/glad/)
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.[ch]pp)
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS code/*.[ch]pp)
 add_executable(${EXECUTABLE_NAME} WIN32 ${SOURCES})
 
 if(EMSCRIPTEN)
 	target_link_libraries(${EXECUTABLE_NAME} PRIVATE
 		"--preload-file \"${CMAKE_CURRENT_LIST_DIR}/assets@/assets\""
-		"--shell-file \"${CMAKE_CURRENT_LIST_DIR}/src/shell.html\""
+		"--shell-file \"${CMAKE_CURRENT_LIST_DIR}/code/shell.html\""
 		"-sMIN_WEBGL_VERSION=2")
 	file(GLOB_RECURSE ASSET_SOURCES CONFIGURE_DEPENDS assets/*)
 	# This is not working when changes are made to "shell.html".
-	set_property(TARGET ${EXECUTABLE_NAME} APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/shell.html ${ASSET_SOURCES})
+	set_property(TARGET ${EXECUTABLE_NAME} APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_LIST_DIR}/code/shell.html ${ASSET_SOURCES})
 else()
 	# This doesn't work in release builds.
 	set(AssetTargetPath ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/assets)

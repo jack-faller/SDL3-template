@@ -72,7 +72,7 @@ while [ $# != 0 ]; do
 				DIR=emscripten-release/Release
 			fi
 			gcc tools/base128-encode.c -o emscripten-debug/base128-encode
-			cp "src/shell.html" "$DIR/$NAME-pack.html"
+			cp "code/shell.html" "$DIR/$NAME-pack.html"
 			echo -n '[' > "$DIR/manifest.json"
 			rm "$DIR/files.bin" || true
 			SEPP=""
