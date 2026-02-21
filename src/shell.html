@@ -76,6 +76,12 @@
 	  </div>
 	</div>
     <script type='text/javascript'>
+	  var manifest_div = document.getElementById('manifest');
+	  var files_div = document.getElementById('files');
+	  if (manifest_div) {
+		  manifest_div.remove();
+		  files_div.remove();
+	  }
 	  class BitWriter {
 		  constructor(length) {
 			  this.array = new Uint8Array(length);
@@ -187,32 +193,34 @@
 			  if (text) console.error('[post-exception status] ' + text);
 		  };
 	  };
-
-	  // data_strings = [{ name: NAME, type: MIME_TYPE, text: BASE128_STRING }, ...]
-	  var data_strings = [
-		  // !! DATA_STRINGS !!
-	  ];
+	  var files = {
+		  // !! DATA_HERE !!
+	  };
+	  function decode_file(name) {
+	    var stream = new Blob([base128_decode(files[name])]).stream();
+		return new Response(stream.pipeThrough(new DecompressionStream("gzip"))).blob();
+      }
 	  async function init_urls() {
-		  for (var string of data_strings) {
-			  data_urls[string.name] = URL.createObjectURL(
-				  await new Response(
-					  new Blob([base128_decode(string.text)])
-						  .stream()
-						  .pipeThrough(new DecompressionStream("gzip")))
-					  .blob()
-					  .then(b => b.slice(0, b.size, string.type))
-			  );
+		  var manifest = await decode_file('manifest').then(b => b.text()).then(JSON.parse);
+		  var data = await decode_file('files');
+          var pos = 0;
+		  for (var entry of manifest) {
+              var end = pos + entry.length;
+			  data_urls[entry.name] = URL.createObjectURL(data.slice(pos, end, entry.type));
+              pos = end;
 		  }
 	  }
-	  init_urls().then(() => {
-		  var script_url = data_urls['script.js'];
-		  if (script_url) {
-			  var script = document.createElement('script');
-			  script.async = true;
-			  script.src = script_url;
-			  document.body.append(script);
-		  }
-	  });
+	  if (files['manifest']) {
+		init_urls().then(() => {
+			var script_url = data_urls['script.js'];
+			if (script_url) {
+				var script = document.createElement('script');
+				script.async = true;
+				script.src = script_url;
+				document.body.append(script);
+			}
+		});
+	  }
 	</script>
 	{{{ SCRIPT }}}
   </body>

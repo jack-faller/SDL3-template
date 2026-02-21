@@ -8,7 +8,7 @@ NL="
 "
 
 docker_run () {
-	docker run --rm --network=host --interactive --tty --volume "$(pwd):/proj" --workdir /proj --user $UID:$GID emscripten/emsdk "$@"
+	docker run --rm --network=host --interactive --tty --volume "$(pwd):/app" --workdir /app --user $UID:$GID emscripten/emsdk "$@"
 }
 
 NAME="$(grep '^project(.*)$' CMakeLists.txt | sed 's/^project(\(.*\))$/\1/')"
@@ -23,7 +23,7 @@ while [ $# != 0 ]; do
 				shift
 				RELEASE="--release"
 			fi
-			docker_run "/proj/$SELF" generic emscripten "$RELEASE"
+			docker_run "/app/$SELF" generic emscripten "$RELEASE"
 			;;
 		glad)
 			glad --api='gles2=3.0' --out-path=libraries/glad
@@ -60,28 +60,42 @@ while [ $# != 0 ]; do
 			shift
 			if [ "$1" = --release ]; then
 				shift
-				exec "./linux-debug/Release/$NAME" "$@"
+				exec "./linux-release/Release/$NAME" "$@"
 			else
 				exec "./linux-debug/Debug/$NAME" "$@"
 			fi
 			;;
 		pack)
-			DIR=emscripten-build/Debug
+			DIR=emscripten-debug/Debug
 			if [ "$2" = --release ]; then
 				shift
 				DIR=emscripten-release/Release
 			fi
 			gcc tools/base128-encode.c -o emscripten-debug/base128-encode
 			cp "src/shell.html" "$DIR/$NAME-pack.html"
+			echo -n '[' > "$DIR/manifest.json"
+			rm "$DIR/files.bin"
+			SEPP=""
 			add_pack_file() {
-				(echo -n "	{ name: '${3-$2}', type: '$1', text: '"
-				 gzip --to-stdout "$DIR/$2" | ./emscripten-debug/base128-encode
-				 echo "' },"
-				) | sed '/!! DATA_STRINGS !!/r /dev/stdin' -i "$DIR/$NAME-pack.html"
+				TYPE="$1"
+				LENGTH="$(wc --bytes < $2)"
+				FNAME="$(echo ${3-$2} | sed "s/'/\\'/g")"
+				echo -n "$SEPP{\"name\":\"$FNAME\",\"type\":\"$TYPE\",\"length\":$LENGTH}" >> "$DIR/manifest.json"
+				SEPP=,
+				cat "$2" >> "$DIR/files.bin"
 			}
-			add_pack_file application/wasm "$NAME.wasm"
-			add_pack_file application/octet-stream "$NAME.data"
-			add_pack_file application/javascript "$NAME.js" "script.js"
+			add_pack_file application/wasm "$DIR/$NAME.wasm"
+			add_pack_file application/octet-stream "$DIR/$NAME.data"
+			add_pack_file application/javascript "$DIR/$NAME.js" "script.js"
+			echo -n ']' >> "$DIR/manifest.json"
+			add_data () {
+				(echo -n "$1:'"
+				 gzip --to-stdout "$2" | ./emscripten-debug/base128-encode
+				 echo -n "',"
+				) | sed "/!! DATA_HERE !!/r /dev/stdin" -i "$DIR/$NAME-pack.html"
+			}
+			add_data files "$DIR/files.bin"
+			add_data manifest "$DIR/manifest.json"
 			sed '/{{{ SCRIPT }}}/d' -i "$DIR/$NAME-pack.html"
 			;;
 		*)
