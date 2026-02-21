@@ -1,17 +1,16 @@
 <!doctype html>
 <html lang='en-us'>
   <head>
-	<meta charset='utf-8'>
-	<meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
-	<title>SDL3 Template</title>
-	<style>
-	  .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
-	  textarea.emscripten { font-family: monospace; width: 80%; }
-	  div.emscripten { text-align: center; }
-	  div.emscripten_border { border: 1px solid black; }
-	  /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
-	  canvas.emscripten { border: 0px none; background-color: black; }
-
+    <meta charset='utf-8'>
+    <meta http-equiv='Content-Type' content='text/html; charset=utf-8'>
+    <title>SDL3 Template</title>
+    <style>
+      .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
+      textarea.emscripten { font-family: monospace; width: 80%; }
+      div.emscripten { text-align: center; }
+      div.emscripten_border { border: 1px solid black; }
+      /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
+      canvas.emscripten { border: 0px none; background-color: black; }
       .spinner {
           height: 50px;
           width: 50px;
@@ -36,192 +35,190 @@
           to {-moz-transform: rotate(360deg);}
       }
       @-o-keyframes rotation {
-		  from {-o-transform: rotate(0deg);}
-		  to {-o-transform: rotate(360deg);}
+          from {-o-transform: rotate(0deg);}
+          to {-o-transform: rotate(360deg);}
       }
       @keyframes rotation {
-		  from {transform: rotate(0deg);}
-		  to {transform: rotate(360deg);}
+          from {transform: rotate(0deg);}
+          to {transform: rotate(360deg);}
       }
-	  html, body, .stack, #canvas {
-		  height: 100vh;
-		  width: 100vw;
-	  }
-	  .stack {
-		  display: grid;
-		  align-items: center;
-	  }
-	  .stack > * {
-		  grid-column: 1;
-		  grid-row: 1;
-	  }
-	  body {
-		  background-color: black;
-		  color: white;
-		  padding: 0;
-		  margin: 0;
-		  bordeh: 0;
-	  }
+      html, body, .stack, #canvas {
+          height: 100vh;
+          width: 100vw;
+      }
+      .stack {
+          display: grid;
+          align-items: center;
+      }
+      .stack > * {
+          grid-column: 1;
+          grid-row: 1;
+      }
+      body {
+          background-color: black;
+          color: white;
+          padding: 0;
+          margin: 0;
+          bordeh: 0;
+      }
     </style>
   </head>
   <body>
     <div class='stack'>
-	  <canvas class='emscripten' id='canvas' oncontextmenu='event.preventDefault()' tabindex=-1></canvas>
-	  <div id='status'>
-		<figure style='overflow:visible;' id='spinner'><div class='spinner'></div></figure>
-		<div class='emscripten' id='message'>Loading...</div>
-		<div class='emscripten'>
-		  <progress value='0' max='100' id='progress' style='visibility: hidden;'></progress>
-		</div>
-	  </div>
-	</div>
+      <canvas class='emscripten' id='canvas' oncontextmenu='event.preventDefault()' tabindex=-1></canvas>
+      <div id='status'>
+        <figure style='overflow:visible;' id='spinner'><div class='spinner'></div></figure>
+        <div class='emscripten' id='message'>Loading...</div>
+        <div class='emscripten'>
+          <progress value='0' max='100' id='progress' style='visibility: hidden;'></progress>
+        </div>
+      </div>
+    </div>
     <script type='text/javascript'>
-	  var manifest_div = document.getElementById('manifest');
-	  var files_div = document.getElementById('files');
-	  if (manifest_div) {
-		  manifest_div.remove();
-		  files_div.remove();
-	  }
-	  class BitWriter {
-		  constructor(length) {
-			  this.array = new Uint8Array(length);
-			  this.byte = 0;
-			  this.subbyte = 0;
-		  }
-		  write7(from) {
-			  from <<= 1;
-			  this.array[this.byte] |= from >> this.subbyte;
-			  // This will index out of bounds on the last byte.
-			  // Luckily it just ignores index out of bounds.
-			  this.array[this.byte + 1] |= from << (8 - this.subbyte);
-			  this.subbyte = (this.subbyte + 7) % 8;
-			  this.byte += this.subbyte >= 7 ? 0 : 1;
-		  }
-	  }
-	  const illegal_table = [
-		  // Tags start at one so put filler in slot 0.
-		  "IGNORE",
-		  "\0", "\r", "\n", "\"",
-		  "'", "`", "$", "\\",
-		  "&", ">", "<",
-	  ].map(e => e.charCodeAt(0));
-	  const FIRST_BYTE_MASK = 0b00011110;
-	  const SECOND_BYTE_MASK = 0b00111111;
-	  // Useful for embedding data straight into JS.
-	  // Could be used with Module::wasmBinary to pack everything in one file.
-	  function base128_decode(string) {
-		  var base128 = new TextEncoder().encode(string);
-		  var raw_length =
-			  base128.length * 7/8
-			  - (base128[base128.length - 1] & 0xF);
-		  var encoded_length = Math.ceil(raw_length * 8/7);
-		  var data = new BitWriter(raw_length);
-		  for (var i = 0; i < encoded_length; ++i) {
-	          if (base128[i] < 128) {
-				  data.write7(base128[i]);
-			  } else {
-				  data.write7(illegal_table[(base128[i] & FIRST_BYTE_MASK) >> 1]);
-				  ++i;
-				  if (i < encoded_length)
-					  data.write7(((base128[i -  1] & 1) << 6)
-								  | (base128[i] & SECOND_BYTE_MASK));
-			  }
-		  }
-		  return data.array;
-	  }
-
-	  const urlParams = new URLSearchParams(window.location.search);
+      var manifest_div = document.getElementById('manifest');
+      var files_div = document.getElementById('files');
+      if (manifest_div) {
+          manifest_div.remove();
+          files_div.remove();
+      }
+      class BitWriter {
+          constructor(length) {
+              this.array = new Uint8Array(length);
+              this.byte = 0;
+              this.subbyte = 0;
+          }
+          write7(from) {
+              from <<= 1;
+              this.array[this.byte] |= from >> this.subbyte;
+              // This will index out of bounds on the last byte.
+              // Luckily it just ignores index out of bounds.
+              this.array[this.byte + 1] |= from << (8 - this.subbyte);
+              this.subbyte = (this.subbyte + 7) % 8;
+              this.byte += this.subbyte >= 7 ? 0 : 1;
+          }
+      }
+      const illegal_table = [
+          // Tags start at one so put filler in slot 0.
+          "IGNORE",
+          "\0", "\r", "\n", "\"",
+          "'", "`", "$", "\\",
+          "&", ">", "<",
+      ].map(e => e.charCodeAt(0));
+      const FIRST_BYTE_MASK = 0b00011110;
+      const SECOND_BYTE_MASK = 0b00111111;
+      // Useful for embedding data straight into JS.
+      // Could be used with Module::wasmBinary to pack everything in one file.
+      function base128_decode(string) {
+          var base128 = new TextEncoder().encode(string);
+          var raw_length =
+              base128.length * 7/8
+              - (base128[base128.length - 1] & 0xF);
+          var encoded_length = Math.ceil(raw_length * 8/7);
+          var data = new BitWriter(raw_length);
+          for (var i = 0; i < encoded_length; ++i) {
+              if (base128[i] < 128) {
+                  data.write7(base128[i]);
+              } else {
+                  data.write7(illegal_table[(base128[i] & FIRST_BYTE_MASK) >> 1]);
+                  ++i;
+                  if (i < encoded_length)
+                      data.write7(((base128[i -  1] & 1) << 6)
+                                  | (base128[i] & SECOND_BYTE_MASK));
+              }
+          }
+          return data.array;
+      }
+      const urlParams = new URLSearchParams(window.location.search);
       var statusElement = document.getElementById('status');
       var messageElement = document.getElementById('message');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
-	  var canvasElement = document.getElementById('canvas');
-
+      var canvasElement = document.getElementById('canvas');
       // As a default initial behavior, pop up an alert when webgl context is lost. To make your
       // application robust, you may want to override this behavior before shipping!
       // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
       canvasElement.addEventListener('webglcontextlost', (e) => {
-		  alert('WebGL context lost. You will need to reload the page.');
-		  e.preventDefault();
+          alert('WebGL context lost. You will need to reload the page.');
+          e.preventDefault();
       }, false);
-	  function set_hidden(elt, state) {
-		  elt.style['visibility'] = state ? 'hidden' : null;
-	  }
-	  var data_urls = {};
-      var Module = {
-		  print(...args) {
-			  console.log(...args);
-		  },
-		  locateFile(path, prefix) {
-			  return data_urls[path] ?? prefix + path;
-		  },
-		  canvas: canvasElement,
-		  setStatus(text) {
-			  Module.setStatus.last ??= { time: Date.now(), text: '' };
-			  if (text === Module.setStatus.last.text) return;
-			  var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
-			  var now = Date.now();
-			  if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
-			  Module.setStatus.last.time = now;
-			  Module.setStatus.last.text = text;
-			  if (m) {
-				  text = m[1];
-				  progressElement.value = parseInt(m[2])*100;
-				  progressElement.max = parseInt(m[4])*100;
-				  set_hidden(progressElement, false);
-				  set_hidden(spinnerElement, false);
-			  } else {
-				  progressElement.value = null;
-				  progressElement.max = null;
-				  set_hidden(progressElement, true);
-				  if (!text) set_hidden(spinnerElement, true);
-			  }
-			  statusElement.style['display'] = text === '' ? 'none' : null;
-			  messageElement.innerHTML = text;
-		  },
-		  totalDependencies: 0,
-		  monitorRunDependencies(left) {
-			  this.totalDependencies = Math.max(this.totalDependencies, left);
-			  Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
-		  }
-	  };
-	  Module.setStatus('Loading...');
-	  window.onerror = () => {
-		  Module.setStatus('Exception thrown, see JavaScript console');
-		  set_hidden(spinnerElement, true);
-		  Module.setStatus = (text) => {
-			  if (text) console.error('[post-exception status] ' + text);
-		  };
-	  };
-	  var data = {
-		  // !! DATA_HERE !!
-	  };
-	  function decode_string(string) {
-	    var stream = new Blob([base128_decode(string)]).stream();
-		return new Response(stream.pipeThrough(new DecompressionStream("gzip"))).blob();
+      function set_hidden(elt, state) {
+          elt.style['visibility'] = state ? 'hidden' : null;
       }
-	  async function init_urls() {
-	      var blob = await decode_string(data.string);
-		  var manifest = await blob.slice(0, data.manifest_length).text().then(JSON.parse);
+      var data_urls = {};
+      var Module = {
+          print(...args) {
+              console.log(...args);
+          },
+          locateFile(path, prefix) {
+              return data_urls[path] ?? prefix + path;
+          },
+          canvas: canvasElement,
+          setStatus(text) {
+              Module.setStatus.last ??= { time: Date.now(), text: '' };
+              if (text === Module.setStatus.last.text) return;
+              var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+              var now = Date.now();
+              if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
+              Module.setStatus.last.time = now;
+              Module.setStatus.last.text = text;
+              if (m) {
+                  text = m[1];
+                  progressElement.value = parseInt(m[2])*100;
+                  progressElement.max = parseInt(m[4])*100;
+                  set_hidden(progressElement, false);
+                  set_hidden(spinnerElement, false);
+              } else {
+                  progressElement.value = null;
+                  progressElement.max = null;
+                  set_hidden(progressElement, true);
+                  if (!text) set_hidden(spinnerElement, true);
+              }
+              statusElement.style['display'] = text === '' ? 'none' : null;
+              messageElement.innerHTML = text;
+          },
+          totalDependencies: 0,
+          monitorRunDependencies(left) {
+              this.totalDependencies = Math.max(this.totalDependencies, left);
+              Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+          }
+      };
+      Module.setStatus('Loading...');
+      window.onerror = () => {
+          Module.setStatus('Exception thrown, see JavaScript console');
+          set_hidden(spinnerElement, true);
+          Module.setStatus = (text) => {
+              if (text) console.error('[post-exception status] ' + text);
+          };
+      };
+      var data = {
+          // !! DATA_HERE !!
+      };
+      function decode_string(string) {
+          var stream = new Blob([base128_decode(string)]).stream();
+          return new Response(stream.pipeThrough(new DecompressionStream("gzip"))).blob();
+      }
+      async function init_urls() {
+          var blob = await decode_string(data.string);
+          var manifest = await blob.slice(0, data.manifest_length).text().then(JSON.parse);
           var pos = data.manifest_length;
-		  for (var entry of manifest) {
+          for (var entry of manifest) {
               var end = pos + entry.length;
-			  data_urls[entry.name] = URL.createObjectURL(blob.slice(pos, end, entry.type));
+              data_urls[entry.name] = URL.createObjectURL(blob.slice(pos, end, entry.type));
               pos = end;
-		  }
-	  }
-	  if (data['string']) {
-		init_urls().then(() => {
-			var script_url = data_urls['script.js'];
-			if (script_url) {
-				var script = document.createElement('script');
-				script.async = true;
-				script.src = script_url;
-				document.body.append(script);
-			}
-		});
-	  }
-	</script>
-	{{{ SCRIPT }}}
+          }
+      }
+      if (data['string']) {
+          init_urls().then(() => {
+              var script_url = data_urls['script.js'];
+              if (script_url) {
+                  var script = document.createElement('script');
+                  script.async = true;
+                  script.src = script_url;
+                  document.body.append(script);
+              }
+          });
+      }
+    </script>
+    {{{ SCRIPT }}}
   </body>
 </html>
