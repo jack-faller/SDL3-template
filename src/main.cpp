@@ -243,7 +243,8 @@ struct AppState {
 
 			  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 			  SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 8);
-
+			  // VSync on.
+			  SDL_GL_SetSwapInterval(1);
 			  SDL_GLContext context = SDL_GL_CreateContext(window);
 
 			  int version = gladLoadGLES2(SDL_GL_GetProcAddress);
