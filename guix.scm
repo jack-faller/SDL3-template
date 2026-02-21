@@ -14,7 +14,7 @@
    (build-system cmake-build-system)
    (native-inputs (map specification->package '("glad")))
    (inputs (cons (specification->package "sdl3")
-								 (map specification->package '())))
+                 (map specification->package '())))
    (home-page "")
    (synopsis "")
    (description "")
