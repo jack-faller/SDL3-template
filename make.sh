@@ -88,14 +88,11 @@ while [ $# != 0 ]; do
 			add_pack_file application/octet-stream "$DIR/$NAME.data" "$NAME.data"
 			add_pack_file application/javascript "$DIR/$NAME.js" "script.js"
 			echo -n ']' >> "$DIR/manifest.json"
-			add_data () {
-				(echo -n "$1:'"
-				 gzip --to-stdout "$2" | ./emscripten-debug/base128-encode
-				 echo -n "',"
-				) | sed "/!! DATA_HERE !!/r /dev/stdin" -i "$DIR/$NAME-pack.html"
-			}
-			add_data files "$DIR/files.bin"
-			add_data manifest "$DIR/manifest.json"
+			(echo -n "string:'"
+			 cat "$DIR/manifest.json" "$DIR/files.bin" \
+				 | gzip --to-stdout - | ./emscripten-debug/base128-encode
+			 echo -n "',manifest_length:$(wc --bytes < "$DIR/manifest.json")"
+			) | sed "/!! DATA_HERE !!/r /dev/stdin" -i "$DIR/$NAME-pack.html"
 			sed '/{{{ SCRIPT }}}/d' -i "$DIR/$NAME-pack.html"
 			;;
 		*)

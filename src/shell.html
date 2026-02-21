@@ -193,24 +193,24 @@
 			  if (text) console.error('[post-exception status] ' + text);
 		  };
 	  };
-	  var files = {
+	  var data = {
 		  // !! DATA_HERE !!
 	  };
-	  function decode_file(name) {
-	    var stream = new Blob([base128_decode(files[name])]).stream();
+	  function decode_string(string) {
+	    var stream = new Blob([base128_decode(string)]).stream();
 		return new Response(stream.pipeThrough(new DecompressionStream("gzip"))).blob();
       }
 	  async function init_urls() {
-		  var manifest = await decode_file('manifest').then(b => b.text()).then(JSON.parse);
-		  var data = await decode_file('files');
-          var pos = 0;
+	      var blob = await decode_string(data.string);
+		  var manifest = await blob.slice(0, data.manifest_length).text().then(JSON.parse);
+          var pos = data.manifest_length;
 		  for (var entry of manifest) {
               var end = pos + entry.length;
-			  data_urls[entry.name] = URL.createObjectURL(data.slice(pos, end, entry.type));
+			  data_urls[entry.name] = URL.createObjectURL(blob.slice(pos, end, entry.type));
               pos = end;
 		  }
 	  }
-	  if (files['manifest']) {
+	  if (data['string']) {
 		init_urls().then(() => {
 			var script_url = data_urls['script.js'];
 			if (script_url) {
