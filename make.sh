@@ -74,7 +74,7 @@ while [ $# != 0 ]; do
 			gcc tools/base128-encode.c -o emscripten-debug/base128-encode
 			cp "src/shell.html" "$DIR/$NAME-pack.html"
 			echo -n '[' > "$DIR/manifest.json"
-			rm "$DIR/files.bin"
+			rm "$DIR/files.bin" || true
 			SEPP=""
 			add_pack_file() {
 				TYPE="$1"
