@@ -20,10 +20,10 @@ int illegal_table[128] = {
 	['$'] = 7,  ['\\'] = 8, ['&'] = 9,  ['>'] = 10, ['<'] = 11,
 };
 
-#define FIRST_BYTE 0b11000000
-#define SECOND_BYTE 0b10000000
+#define FIRST_BYTE       0b11000000
+#define SECOND_BYTE      0b10000000
 #define SECOND_BYTE_MASK 0b00111111
-#define MASK 0b01111111
+#define MASK             0b01111111
 int previous = -1;
 void write_char(int c) {
 	if (previous != -1) {
